@@ -51,9 +51,9 @@ int main(){
   double r;
     for(size_t j = 0 ; j < Ny; ++j){
         for(size_t i = 0 ; i < Nx; ++i){
-                r = std::sqrt(i*i+std::pow(j-0.5*Ny-0.5,2));
+                r = std::sqrt( i*i+std::pow(j-0.5*(Ny)-0.5, 2) );
                 if(r < R){
-                    Tz1[i][j] = 0.5*cos(0.5 * M_PI *r/R);
+                    Tz1[i][j-1] = 0.5;//0.5*cos(0.5 * M_PI *r/R);
                 }
         }
     }
@@ -62,7 +62,7 @@ int main(){
 
     // create matrix corresponding to finite difference discretization of Laplace equation (AT = b)
 
-    createMatrixDiag( A, N_dof,  Nx, Ny, Nz);
+    createMatrixDiag(A, N_dof,  Nx, Ny, Nz);
 
 
 //     % create right side using boundary condition T|_{z=0} = Tz1(x,y)
@@ -73,7 +73,7 @@ int main(){
 // end
     for(size_t j = 1 ; j < Ny; ++j){
         for(size_t i = 0 ; i < Nx; ++i){
-            b[i + (j-1)*Nx] = - Tz1[i][j];
+            b[i + (j)*Nx] = - Tz1[i][j];
         }
     }
     ai::saveVector("b",b);
@@ -84,8 +84,31 @@ int main(){
 
     //     %  solve A*T=b using conjugate gradient method
     // [T n_iter] = conj_grad(A, b, Nx, Nx*Ny, N_DOF)
-    conjGrad(A, b, Nx , Nx*Ny , N_dof);
+    conjGrad( T ,A, b, Nx , Nx*Ny , N_dof);
 
-    ai::saveMatrix("Pres", A);
+    ai::saveVector("Pres", T);
+
+
+//     % calculate pressures
+// press = zeros(Nx,Ny);
+// for ii=1:Nx
+//     for jj=1:Ny
+//         press(ii,jj) = 0.5*E/(1-nu^2) * (Tz1(ii,jj) - T(ii + (jj-1)*Nx))/dx;
+//     end
+// end
+
+    std::vector<std::vector<double> > press;
+    press.resize(Nx);
+    for(size_t i = 0;i<press.size();++i)
+        press[i].resize(Ny);
+
+    for(size_t i =0 ; i < Nx;++i){
+        for(size_t j = 0 ; j < Ny;++j){
+            press[i][j] = (0.5*E/(1.- nu*nu)) * (Tz1[i][j] - T[i+ (j)*Nx] )/dx;
+        }
+    }
+
+    ai::saveMatrix("pressure", press);
+
     return 1;
 }

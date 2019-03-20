@@ -30,13 +30,14 @@
 //    end
 //    figure(11); plot(residual); title(['number of iterations = ', num2str(n_iter)]);
 // end
-void conjGrad(std::vector<std::vector<double> >&A,
+void conjGrad(std::vector<double> &x,
+                    std::vector<std::vector<double> >&A,
                             std::vector<double>&b,
                             size_t Nx , size_t NxNy , size_t N_dof){
 
 
-    std::vector<double> residual(30, 0.);
-    std::vector<double> x(N_dof, 0.);
+    std::vector<double> residual;
+    //std::vector<double> x(N_dof, 0.);
     std::vector<double> r1(N_dof, 0.);
     std::vector<double> r2(N_dof, 0.);
     std::vector<double> p(N_dof, 0.);
@@ -58,45 +59,48 @@ void conjGrad(std::vector<std::vector<double> >&A,
     //         residual(n_iter) = eps;
     //         n_iter = n_iter + 1;
     //    end
+    std::vector<double> x1(N_dof , 0.);
+    std::vector<double> p1(N_dof , 0.);
+
     std::vector<double> A_p(N_dof , 0.);
     std::vector<double> r1r1(N_dof , 0.);
     std::vector<double> r2r2(N_dof , 0.);
     std::vector<double> A_p_p(N_dof , 0.);
-    std::vector<double> alpha(N_dof , 0.);
+    double alpha;
+    double beta;
     std::vector<double> alphap(N_dof , 0.);
     std::vector<double> alphaA_p(N_dof , 0.);
-    std::vector<double> beta(N_dof , 0.);
+
     std::vector<double> betap(N_dof , 0.);
     while(0.01 < eps){
-        multiplyDiag(A_p ,p,A, Nx , NxNy , N_dof);
+        multiplyDiag(A_p, A, p, Nx , NxNy , N_dof);
+        //ai::printMarker();
+        //ai::saveVector("A_p", A_p);
+        alpha = MultiplyVV(r1,r1)/MultiplyVV(A_p,p);
+        // std::cout<<"alpha = "<<alpha<<std::endl;
+        // std::cout<<"MultiplyVV(r1,r1) = "<<MultiplyVV(r1,r1)<<std::endl;
+        // std::cout<<"MultiplyVV(A_p,p) = "<<MultiplyVV(A_p,p)<<std::endl;
+        MultiplyVN(p,alpha);
+        // std::cout<<"Norm(r1) = "<< NormV(r1)<<std::endl;
+        SumVV(x, p, x1);
+        x=x1;
+        // ai::saveVector("x",x);
+        MultiplyVN(A_p,-alpha);
 
-        MultiplyVV(r1,r1, r1r1);
+        SumVV(r1 ,A_p, r2);
+        // ai::saveVector("r2",r2);
+        beta = MultiplyVV(r2,r2)/MultiplyVV(r1,r1);
+        // std::cout<<"beta = "<<beta<<std::endl;
+        MultiplyVN(p, beta);
 
-        MultiplyVV(A_p , p , A_p_p);
-
-        DevideVV(r1r1, A_p_p, alpha);
-
-        MultiplyVV(alpha,p, alphap);
-
-        SumVV(x , alphap, x);
-
-        MultiplyVV(alpha, A_p, alphaA_p);
-
-        SubstractVV(r1 , alphaA_p, r1);
-
-        MultiplyVV(r2,r2,r2r2);
-
-        DevideVV(r2r2,r1r1, beta);
-
-        MultiplyVV(beta,p,betap);
-
-        SumVV(r2,betap,p);
-
-        r1=r2;
+        SumVV(r2,p,p1);
+        p=p1;
+        // ai::saveVector("p",p);
+        r1 = r2;
 
         eps = NormV(r2)/NormV(x);
-
-        residual[n_iter-1]= eps;
+        // std::cout<<"eps = "<<eps<<std::endl;
+        residual.push_back(eps);
         ++n_iter;
 
     }
@@ -135,8 +139,8 @@ void conjGrad(std::vector<std::vector<double> >&A,
 //     end
 // end
 //
-void multiplyDiag(std::vector<double> &y, std::vector<double >&x,
-                        std::vector<std::vector<double> >&A,size_t Nx , size_t NxNy , size_t N_dof){
+void multiplyDiag(std::vector<double> &y, std::vector<std::vector<double> >&A,std::vector<double >&x,
+                        size_t Nx , size_t NxNy , size_t N_dof){
     //std::vector<double> y(N_dof, 0.);
     //% multiply by 3rd, 4th, 5th diagonals
     y[0] = A[0][3]*x[0] + A[0][4]*x[1];
@@ -165,12 +169,23 @@ void multiplyDiag(std::vector<double> &y, std::vector<double >&x,
        y[i] += A[i][6]*x[i+NxNy];
    }
 }
-void MultiplyVV(std::vector<double>&a, std::vector<double>&b, std::vector<double>&c){
-    if(a.size()!=b.size() && c.size()!=b.size()){
+double MultiplyVV(std::vector<double>&a, std::vector<double>&b){
+    if( a.size()!=b.size() ){
         std::cout<<"Warning!!"<<std::endl;
     }
-    for(size_t i =0 ; i < a.size();i++ )
-        c[i]=a[i]*b[i];
+    double c=0.;
+    for(size_t i = 0; i < a.size();i++){
+        c=c+ a[i]*b[i];
+    }
+    return c;
+}
+
+void MultiplyVN(std::vector<double>&a, double b){
+
+
+    for(size_t i = 0; i < a.size();i++ )
+        a[i]*=b;
+
 }
 
 void DevideVV(std::vector<double>&a, std::vector<double>&b, std::vector<double>&c){
@@ -198,9 +213,9 @@ void SubstractVV(std::vector<double>&a, std::vector<double>&b, std::vector<doubl
 }
 
 double NormV(std::vector<double>&x){
-    double a;
+    double a = 0.;
     for(size_t i = 0 ; i< x.size(); ++i){
-        a += x[i]*x[i];
+        a = a+x[i]*x[i];
     }
     return sqrt(a);
 }
