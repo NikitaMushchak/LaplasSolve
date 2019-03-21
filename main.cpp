@@ -8,7 +8,7 @@
 #include "createMatrix.hh"
 #include "conjgrad.hh"
 
-# define M_PI           3.14159265358979323846
+#define M_PI           3.141592653589793238463
 
 int main(){
     size_t Nx = 15;
@@ -53,7 +53,7 @@ int main(){
         for(size_t i = 0 ; i < Nx; ++i){
                 r = std::sqrt( i*i+std::pow(j-0.5*(Ny)-0.5, 2) );
                 if(r < R){
-                    Tz1[i][j-1] = 0.5;//0.5*cos(0.5 * M_PI *r/R);
+                    Tz1[i][j-1] = 0.5*std::cos((0.5 * M_PI *r)/R);
                 }
         }
     }
@@ -84,7 +84,7 @@ int main(){
 
     //     %  solve A*T=b using conjugate gradient method
     // [T n_iter] = conj_grad(A, b, Nx, Nx*Ny, N_DOF)
-    conjGrad( T ,A, b, Nx , Nx*Ny , N_dof);
+    conjGrad(T ,A, b, Nx , Nx*Ny , N_dof);
 
     ai::saveVector("Pres", T);
 
