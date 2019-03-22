@@ -47,18 +47,7 @@ void conjGrad(std::vector<double> &x,
     p = r1;
     double eps = 1.;
     size_t n_iter = 1;
-    //while eps > 0.01
-    //         A_p = multiply_diag(A, p, Nx, Nx_Ny, N_DOF);
-    //         alpha = r1'*r1/(A_p'*p);
-    //         x = x + alpha*p;
-    //         r2 = r1 - alpha * A_p;
-    //         beta = (r2'*r2)/(r1'*r1);
-    //         p = r2 + beta * p;
-    //         r1 = r2;
-    //         eps = norm(r2)/norm(x);
-    //         residual(n_iter) = eps;
-    //         n_iter = n_iter + 1;
-    //    end
+    
     std::vector<double> x1(N_dof , 0.);
     std::vector<double> p1(N_dof , 0.);
 
@@ -72,10 +61,11 @@ void conjGrad(std::vector<double> &x,
     std::vector<double> alphaA_p(N_dof , 0.);
 
     std::vector<double> betap(N_dof , 0.);
-     while(0.01 < eps){
+    // while(0.01 < eps){
         multiplyDiag(A_p, A, p, Nx , NxNy , N_dof);
         //ai::printMarker();
-        //ai::saveVector("A_p", A_p);
+		ai::saveVector("p",p);
+		ai::saveVector("A_p", A_p);
         alpha = MultiplyVV(r1,r1)/MultiplyVV(A_p,p);
 
         // std::cout<<"alpha = "<<std::fixed<<std::setprecision(15)<<alpha<<std::endl;
@@ -125,7 +115,7 @@ void conjGrad(std::vector<double> &x,
         residual.push_back(eps);
         ++n_iter;
 
-     }
+     //}
 
     std::cout<<"iter = "<<n_iter<<std::endl;
 
