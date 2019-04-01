@@ -3,19 +3,29 @@
 
 #include "ai.hh"
 
-void createMatrixDiag(std::vector<std::vector<double> >& A,
+void createMatrixDiag(
+                        std::vector<double>& A1,
+                        std::vector<double>& A2,
+                        std::vector<double>& A3,
+                        std::vector<double>& A4,
+                        std::vector<double>& A5,
+                        //std::vector<double>& A6,
                             size_t N_dof, size_t Nx, size_t Ny, size_t Nz){
 
     size_t NxNy = Nx * Ny;
 //     % create all diagonals
     for(size_t i = 0; i < N_dof ;++i){
-        A[i][0] = 1.;
-        A[i][1] = 1.;
-        A[i][2] = 1.;
-        A[i][3] = -6.;
-        A[i][4] = 1.;
-        A[i][5] = 1.;
-        A[i][6] = 1.;
+        // A0[i] = 1.;
+        //A1[i] = 1.;
+        A2[i] = 1.;
+        A3[i] = -6.;
+        A4[i] = 1.;
+        //A5[i] = 1.;
+        //A6[i] = 1.;
+    }
+    for(size_t i = 0; i<N_dof - Nx; ++i){
+        A1[i] = 1.;
+        A5[i] = 1.;
     }
     // ai::printMarker();
     //% set some elements of A equal to zero using boundary conditions
@@ -26,35 +36,39 @@ void createMatrixDiag(std::vector<std::vector<double> >& A,
    for(size_t j = 0 ; j < Ny; ++j){
        for(size_t k = 0 ; k < Nz; ++k){
            n = j * Nx + k * NxNy;
-           A[n][2] = 0.;
-           A[n][4] = 2.;
+           A2[n] = 0.;
+           A4[n] = 2.;
 
            p = n + Nx - 1;
-           A[p][4] = 0.;
-           A[p][3] = -5.;
+           A4[p] = 0.;
+           A3[p] = -5.;
        }
    }
 // ai::printMarker();
    for(size_t i = 0; i < Nx; ++i ){
       for(size_t k = 0; k < Nz; ++k){
           n = i  + k * NxNy;
-          A[n][1] = 0.;
-          A[n][3] = -5.;
+          if(n-Nx < N_dof-Nx){
+            A1[n-Nx] = 0.;
+          }
+          A3[n] = -5.;
 
           p = n + (Ny-1)*Nx;
-          A[p][5] = 0.;
-          A[p][3] = -5.;
+          if(p <= N_dof-Nx-1){
+            A5[p] = 0.;
+          }
+          A3[p] = -5.;
       }
   }
 // ai::printMarker();
   for(size_t i = 0; i<Nx ;++i){
       for(size_t j = 0; j < Ny; ++j){
           n = i  + j * Nx;
-          A[i + j*Nx][0] = 0.; //% k=1
 
-          A[n + (Nz-1)*NxNy][5] = 0.;
-          A[n + (Nz-1)*NxNy][3] = -5.;
+          if(n + (Nz-1)*NxNy < N_dof-Nx){
+              A5[n + (Nz-1)*NxNy] = 0.;
+          }
+          A3[n + (Nz-1)*NxNy] = -5.;
       }
   }
-// ai::printMarker();
 }

@@ -24,25 +24,26 @@ int main(){
 
     size_t N_dof = Nx * Ny * Nz;    // number of unknowns in Laplace equation
     std::vector<double> T(N_dof, 0.);  // unknowns in  finite difference discretization of Laplace equation (AT = b)
-    std::vector<std::vector<double> > A; // matrix corresponding to finite difference discretization of Laplace equation (AT = b)
-    A.resize(N_dof);                     //. Nonzero elements are stored only.
-    for(size_t i = 0 ; i<A.size(); ++i){
-        A[i].resize(7);
-    }
+
+    //std::vector<double> A0(N_dof, 0.);
+    std::vector<double> A1(N_dof - Nx, 0.);
+    std::vector<double> A2(N_dof, 0.);
+    std::vector<double> A3(N_dof, 0.);
+    std::vector<double> A4(N_dof, 0.);
+    std::vector<double> A5(N_dof - Nx, 0.);
+    //std::vector<double> A6(N_dof, 0.);
+
+
     std::vector<double> b(N_dof, 0.);  // right side of finite difference discretization of Laplace equation
-	
+    std::vector<double> r1(N_dof, 0.);
+    std::vector<double> r2(N_dof, 0.);
+    std::vector<double> p(N_dof, 0.);
+    std::vector<double> A_p(N_dof, 0.);
+
+
 	std::cout<<"Nx = "<<Nx<<" Ny = "<<Ny<<"  Nz= "<<Nz<<std::endl;;
-    std::cout<<"A size : "<<A.size()<<" x "<<A[0].size()<<std::endl;
-//     % set boundary conditions at z = 0 and z=(Nz-1)*dx
-// Tz1 = zeros(Nx, Ny);  % at z = 0
-// for jj=1:Ny
-//     for ii=1:Nx
-//         r = sqrt((ii-1)^2+(jj-0.5*Ny-0.5)^2);
-//         if r < R
-//             Tz1(ii,jj) = 0.5*cos(0.5*pi*r/R);%cos(0.5*pi*r/R); % Tz1(x,y) is equal to a HALF of crack opening 0.5*w(x,y)
-//         end
-//     end
-// end
+    std::cout<<"A3 size : "<<A3.size()<<std::endl;
+//
 
     std::vector<std::vector<double> > Tz1; //раскрытие
     Tz1.resize(Nx);
@@ -59,13 +60,28 @@ int main(){
                 }
         }
     }
-
-    ai::saveMatrix("Tz1",Tz1);
+auto start = ai::time();
+    // ai::saveMatrix("Tz1",Tz1);
 
     // create matrix corresponding to finite difference discretization of Laplace equation (AT = b)
 
-    createMatrixDiag(A, N_dof, Nx, Ny, Nz);
-
+    createMatrixDiag(   A1,
+                        A2,
+                        A3,
+                        A4,
+                        A5,
+                        N_dof,
+                        Nx,
+                        Ny,
+                        Nz);
+        //ai::printMarker();
+    //ai::saveVector("A0",A0);
+    // ai::saveVector("A1",A1);
+    // ai::saveVector("A2",A2);
+    // ai::saveVector("A3",A3);
+    // ai::saveVector("A1",A4);
+    // ai::saveVector("A5",A5);
+    // ai::saveVector("A6",A6);
 //     % create right side using boundary condition T|_{z=0} = Tz1(x,y)
 // for jj=1:Ny
 //     for ii=1:Nx
@@ -74,42 +90,50 @@ int main(){
 // end
     for(size_t j = 1 ; j < Ny; ++j){
         for(size_t i = 0 ; i < Nx; ++i){
-            b[i + (j)*Nx] = - Tz1[i][j];
+            b[i + j*Nx] = - Tz1[i][j];
         }
     }
-    ai::saveVector("b",b);
+    // ai::saveVector("b",b);
 
-    ai::saveMatrix("A", A);
-
-
+    // ai::saveMatrix("A", A);
 
     //     %  solve A*T=b using conjugate gradient method
     // [T n_iter] = conj_grad(A, b, Nx, Nx*Ny, N_DOF)
-    conjGrad(T ,A, b, Nx , Nx*Ny , N_dof);
+    auto t1 = ai::time();
+    // conjGrad(T ,A, b, Nx , Nx*Ny , N_dof);
+    conjGrad(T,                   // выход функции
+                A1,
+                A2,
+                A3,
+                A4,
+                A5,
+                b,       // вектор раскрытий
+                r1,
+                r2,
+                p,
+                A_p,
+                Nx,
+                Nx*Ny,
+                N_dof);
+    auto t2 = ai::time();
+    std::cout<<"conj grad time = "<<ai::duration(t1,t2, "us")<<" us"<<std::endl;
+    // ai::saveVector("Pres", T);
 
-    ai::saveVector("Pres", T);
-
-
-//     % calculate pressures
-// press = zeros(Nx,Ny);
-// for ii=1:Nx
-//     for jj=1:Ny
-//         press(ii,jj) = 0.5*E/(1-nu^2) * (Tz1(ii,jj) - T(ii + (jj-1)*Nx))/dx;
-//     end
-// end
 
     std::vector<std::vector<double> > press;
     press.resize(Nx);
-    for(size_t i = 0;i<press.size();++i)
+    for(size_t i = 0;i < press.size();++i)
         press[i].resize(Ny);
 
-    for(size_t i =0 ; i < Nx;++i){
-        for(size_t j = 0 ; j < Ny;++j){
-            press[i][j] = (0.5*E/(1.- nu*nu)) * (Tz1[i][j] - T[i + j*Nx] )/dx;
+    for(size_t i = 0; i < Nx;++i){
+        for(size_t j = 0; j < Ny;++j){
+            press[i][j] = (0.5*E/(1.- nu*nu)) * (-b[i + j*Nx] - T[i + j*Nx])/dx;
         }
     }
 
-    ai::saveMatrix("pressure", press);
+    auto finish = ai::time();
+    std::cout<<"TIME = "<<ai::duration(start, finish , "us")<<" us "<<std::endl;
+    // ai::saveMatrix("pressure", press);
 
     return 1;
 }
